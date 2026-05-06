@@ -83,7 +83,10 @@ struct GameState {
 };
 GameState game;
 
-
+enum rarity {
+	COMMON,
+	RARE
+};
 
 class Augment {
 public:
@@ -106,17 +109,17 @@ vector<Augment> CommonAugments = {
 	},
 	{
 		"Wide Bar",
-		"バーサイズを10%増加",
+		"バーサイズを20%増加",
 		[]() {
-			game.barScale *= 1.1f;
+			game.barScale *= 1.2f;
 		},
 		false
 	},
 	{
 		"Ball Size Up",
-		"ボールサイズを50%増加",
+		"ボールサイズを70%増加",
 		[]() {
-			game.ballScale *= 1.5f;
+			game.ballScale *= 1.7f;
 		},
 		false
 	},
@@ -149,20 +152,17 @@ vector<Augment> RareAugments = {
 	},
 	{
 	"Copy Ball",
-	"ボールが３つに分裂",
+	"ボールが2つに分裂",
 	[]() {
 		vector<ball> newBalls;
 
 		for (auto& b : balls)
 		{
 			ball b1 = b;
-			ball b2 = b;
 			// 少し角度ずらす
 			b1.vx += 0.5f;
-			b2.vx -= 0.5f;
 
 			newBalls.push_back(b1);
-			newBalls.push_back(b2);
 		}
 
 		// 元のボールに追加
@@ -170,7 +170,32 @@ vector<Augment> RareAugments = {
 			balls.push_back(nb);
 	},
 	false
-}
+	},
+	{
+	"Add Ball",
+	"ボールが5コ追加",
+	[]() {
+		for (int i = 0; i < 5; ++i)
+		{
+			ball b;
+			b.x = bar.x;
+			b.y = bar.y - BALL_SIZE;
+			b.vx = (rand() % 200 - 100) / 100.0f; // ランダムなX速度
+			b.vy = -1;
+			balls.push_back(b);
+		}
+	},
+	false
+	},
+	{
+	"Pierce",
+	"ボールがブロックを貫通する",
+	[]() {
+		game.isPierce = true;
+
+	},
+	true
+	}
 };
 
 // 重複不可オーグメントが既に取得されているかどうかを判定する関数
@@ -180,11 +205,13 @@ bool IsOwned(const Augment& aug)
 
 	if (aug.name == "Angle Control" && game.hasAngleControl)
 		return true;
+	if (aug.name == "Pierce" && game.isPierce)
+		return true;
 
 	return false;
 }
 // オーグメント選択
-void GenerateAugments()
+void GenerateAugments(rarity r)
 {
 	currentChoices.clear();
 	int choices[3];
@@ -197,6 +224,16 @@ void GenerateAugments()
 	do {
 		choices[2] = rand() % CommonAugments.size();
 	} while (choices[2] == choices[0] || choices[2] == choices[1] || IsOwned(CommonAugments[choices[2]]));
+	if (r == RARE)//レアオーグメントを1つ混ぜる
+	{
+		do {
+			choices[0] = rand() % RareAugments.size();
+		} while (IsOwned(RareAugments[choices[0]]));
+		currentChoices.push_back(RareAugments[choices[0]]);
+		currentChoices.push_back(CommonAugments[choices[1]]);
+		currentChoices.push_back(CommonAugments[choices[2]]);
+		return;
+	}
 	currentChoices.push_back(CommonAugments[choices[0]]);
 	currentChoices.push_back(CommonAugments[choices[1]]);
 	currentChoices.push_back(CommonAugments[choices[2]]);
@@ -364,17 +401,29 @@ void MoveBalls()
 		}
 
 		// ブロック
-		if (isDeleteBlock(ballx1, ball.y) || isDeleteBlock(ballx2, ball.y))
-		{
-			ball.vx = -ball.vx;
-			PlaySoundMem(BlockHitMusicHandle, DX_PLAYTYPE_BACK);
-		}
-			
+		bool hitX = isDeleteBlock(ballx1, ball.y) || isDeleteBlock(ballx2, ball.y);
+		bool hitY = isDeleteBlock(ball.x, bally1) || isDeleteBlock(ball.x, bally2);
 
-		if (isDeleteBlock(ball.x, bally1) || isDeleteBlock(ball.x, bally2))
+		if (!game.isPierce)
 		{
-			ball.vy = -ball.vy;
-			PlaySoundMem(BlockHitMusicHandle, DX_PLAYTYPE_BACK);
+			if (hitX)
+			{
+				ball.vx = -ball.vx;
+				PlaySoundMem(BlockHitMusicHandle, DX_PLAYTYPE_BACK);
+			}
+			if (hitY)
+			{
+				ball.vy = -ball.vy;
+				PlaySoundMem(BlockHitMusicHandle, DX_PLAYTYPE_BACK);
+			}
+		}
+		else
+		{
+			// 貫通時：壊すだけ（反射なし）
+			if (hitX || hitY)
+			{
+				PlaySoundMem(BlockHitMusicHandle, DX_PLAYTYPE_BACK);
+			}
 		}
 			
 
@@ -452,30 +501,32 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 				if (augmentCount == 0)
 				{
-					GenerateAugments();
+					GenerateAugments(RARE);
 					mode = MODE_AUGMENT_SELECT;
 					augmentCount++;
 				}
 				// テスト：スコアで遷移
 				if (score >= 200 && augmentCount == 1)
 				{
-					GenerateAugments();
+					GenerateAugments(RARE);
 					mode = MODE_AUGMENT_SELECT;
 					augmentCount++;
 				}
 				if (score >= 400 && augmentCount == 2)
 				{
-					GenerateAugments();
+					GenerateAugments(RARE);
 					mode = MODE_AUGMENT_SELECT;
 					augmentCount++;
 				}if (score >= 600 && augmentCount == 3)
 				{
-					RareAugments[1].applyEffect();
+					GenerateAugments(RARE);
+					mode = MODE_AUGMENT_SELECT;
 					augmentCount++;
 				}
 				if (score >= 800 && augmentCount == 4)
 				{
-					RareAugments[1].applyEffect();
+					GenerateAugments(RARE);
+					mode = MODE_AUGMENT_SELECT;
 					augmentCount++;
 				}
 			}
