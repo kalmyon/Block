@@ -3,6 +3,7 @@
 #include <vector>
 #include<functional>
 #include<time.h>
+#include<math.h>
 using namespace std;
 // 定数 const を付けると定数 
 const int WINDOW_SIZE_X = 640;
@@ -360,7 +361,7 @@ void UpdateAugmentSelect()
 		mode = MODE_GAME;
 		
 	}
-	WaitTimer(150);
+	
 }
 
 //描画関数
@@ -561,6 +562,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	// マウスを表示状態にする
 	SetMouseDispFlag(TRUE);
 
+
+	int nextAugmentScore = 500;
 	//int BGMHandle = LoadSoundMem("wa_001.wav");//BGMの読み込み
 	int BGMHandle = LoadSoundMem("PicoDash!!.mp3");//BGMの読み込み
 	BlockHitMusicHandle = LoadSoundMem("putMAN.wav");
@@ -619,29 +622,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 					augmentCount++;
 				}
 				// テスト：スコアで遷移
-				if (score >= 200 && augmentCount == 1)
+				if (score >= nextAugmentScore)
 				{
-					GenerateAugments(RARE);
+					if (augmentCount % 2 == 1)
+						GenerateAugments(RARE);
+					else
+						GenerateAugments(COMMON);
+
 					mode = MODE_AUGMENT_SELECT;
 					augmentCount++;
+
+					// 次回必要スコアを増加
+					nextAugmentScore *= 1.5f;
 				}
-				if (score >= 400 && augmentCount == 2)
-				{
-					GenerateAugments(RARE);
-					mode = MODE_AUGMENT_SELECT;
-					augmentCount++;
-				}if (score >= 600 && augmentCount == 3)
-				{
-					GenerateAugments(RARE);
-					mode = MODE_AUGMENT_SELECT;
-					augmentCount++;
-				}
-				if (score >= 800 && augmentCount == 4)
-				{
-					GenerateAugments(RARE);
-					mode = MODE_AUGMENT_SELECT;
-					augmentCount++;
-				}
+				
 				if (IsStageClear())
 				{
 					mode = MODE_STAGE_CLEAR;
