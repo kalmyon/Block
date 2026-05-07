@@ -52,6 +52,7 @@ void InitBall()
 }
 
 int score = 0;//スコア
+int nextAugmentScore = 500;
 int block[BLOCK_NUM_Y][BLOCK_NUM_X] =
 {
 	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,},
@@ -120,9 +121,9 @@ vector<Augment> CommonAugments = {
 	},
 	{
 		"Ball Size Up",
-		"ボールサイズを70%増加",
+		"ボールサイズを50%増加",
 		[]() {
-			game.ballScale *= 1.7f;
+			game.ballScale *= 1.5f;
 		},
 		false
 	},
@@ -176,14 +177,14 @@ vector<Augment> RareAugments = {
 	},
 	{
 	"Add Ball",
-	"ボールが5コ追加",
+	"ボールが3コ追加",
 	[]() {
-		for (int i = 0; i < 5; ++i)
+		for (int i = 0; i < 3; i++)
 		{
 			ball b;
-			b.x = bar.x;
+			b.x = bar.x - (i - 1) * BALL_SIZE;
 			b.y = bar.y - BALL_SIZE;
-			b.vx = 0.2f * (i - 2); //散らす
+			b.vx = (float)(i - 1); //散らす
 			b.vy = -1;
 			balls.push_back(b);
 		}
@@ -383,7 +384,7 @@ void Draw()
 				DrawGraph(x * BLOCK_SIZE_X, BLOCK_TOP_Y + y * BLOCK_SIZE_Y, BlockHandle[y], FALSE);
 		}
 	}
-	DrawString(5, 5, ("STAGE: "+ to_string(stage) +  "   SCORE: " + to_string(score)).c_str(), GetColor(255, 255, 0));
+	DrawString(5, 5, ("STAGE: "+ to_string(stage) +  "   SCORE: " + to_string(score) + "   NEXT AUGMENT: " + to_string(nextAugmentScore)).c_str(), GetColor(255, 255, 0));
 }
 
 //Barの座標を変える関数
@@ -563,7 +564,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	SetMouseDispFlag(TRUE);
 
 
-	int nextAugmentScore = 500;
+	
 	//int BGMHandle = LoadSoundMem("wa_001.wav");//BGMの読み込み
 	int BGMHandle = LoadSoundMem("PicoDash!!.mp3");//BGMの読み込み
 	BlockHitMusicHandle = LoadSoundMem("putMAN.wav");
